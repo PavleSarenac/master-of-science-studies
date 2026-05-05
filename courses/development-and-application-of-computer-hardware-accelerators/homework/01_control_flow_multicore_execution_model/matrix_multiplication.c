@@ -240,11 +240,11 @@ void benchmark_sequential_01(int number_of_runs, int number_of_rows, int number_
 
         double run_duration_in_seconds = end_time_in_seconds - start_time_in_seconds;
 
-        long total_number_of_multiplications = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_additions = number_of_rows * number_of_rows * (number_of_rows - 1);
-        long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
+        unsigned long long total_number_of_multiplications = (unsigned long long)number_of_rows * number_of_rows * number_of_rows;
+        unsigned long long total_number_of_additions = (unsigned long long)number_of_rows * number_of_rows * (number_of_rows - 1);
+        unsigned long long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
 
-        double total_number_of_floating_point_operations_per_second = total_number_of_floating_point_operations / run_duration_in_seconds;
+        double total_number_of_floating_point_operations_per_second = (double)total_number_of_floating_point_operations / run_duration_in_seconds;
         double total_number_of_billions_of_floating_point_operations_per_second = total_number_of_floating_point_operations_per_second / ONE_BILLION_FLOATING_POINT_OPERATIONS;
 
         fprintf(benchmarking_result_file, "%d,%d,%d,%.5f,%.5f\n", current_run_index + 1, number_of_rows, number_of_columns, run_duration_in_seconds, total_number_of_billions_of_floating_point_operations_per_second);
@@ -291,11 +291,11 @@ void benchmark_sequential_02(int number_of_runs, int number_of_rows, int number_
 
         double run_duration_in_seconds = end_time_in_seconds - start_time_in_seconds;
 
-        long total_number_of_multiplications = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_additions = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
+        unsigned long long total_number_of_multiplications = (unsigned long long)number_of_rows * number_of_rows * number_of_rows;
+        unsigned long long total_number_of_additions = (unsigned long long)number_of_rows * number_of_rows * (number_of_rows - 1);
+        unsigned long long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
 
-        double total_number_of_floating_point_operations_per_second = total_number_of_floating_point_operations / run_duration_in_seconds;
+        double total_number_of_floating_point_operations_per_second = (double)total_number_of_floating_point_operations / run_duration_in_seconds;
         double total_number_of_billions_of_floating_point_operations_per_second = total_number_of_floating_point_operations_per_second / ONE_BILLION_FLOATING_POINT_OPERATIONS;
 
         fprintf(benchmarking_result_file, "%d,%d,%d,%.5f,%.5f\n", current_run_index + 1, number_of_rows, number_of_columns, run_duration_in_seconds, total_number_of_billions_of_floating_point_operations_per_second);
@@ -342,11 +342,11 @@ void benchmark_sequential_03(int number_of_runs, int number_of_rows, int number_
 
         double run_duration_in_seconds = end_time_in_seconds - start_time_in_seconds;
 
-        long total_number_of_multiplications = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_additions = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
+        unsigned long long total_number_of_multiplications = (unsigned long long)number_of_rows * number_of_rows * number_of_rows;
+        unsigned long long total_number_of_additions = (unsigned long long)number_of_rows * number_of_rows * (number_of_rows - 1);
+        unsigned long long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
 
-        double total_number_of_floating_point_operations_per_second = total_number_of_floating_point_operations / run_duration_in_seconds;
+        double total_number_of_floating_point_operations_per_second = (double)total_number_of_floating_point_operations / run_duration_in_seconds;
         double total_number_of_billions_of_floating_point_operations_per_second = total_number_of_floating_point_operations_per_second / ONE_BILLION_FLOATING_POINT_OPERATIONS;
 
         fprintf(benchmarking_result_file, "%d,%d,%d,%.5f,%.5f\n", current_run_index + 1, number_of_rows, number_of_columns, run_duration_in_seconds, total_number_of_billions_of_floating_point_operations_per_second);
@@ -393,11 +393,11 @@ void benchmark_parallel_03(int number_of_runs, int number_of_rows, int number_of
 
         double run_duration_in_seconds = end_time_in_seconds - start_time_in_seconds;
 
-        long total_number_of_multiplications = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_additions = number_of_rows * number_of_rows * number_of_rows;
-        long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
+        unsigned long long total_number_of_multiplications = (unsigned long long)number_of_rows * number_of_rows * number_of_rows;
+        unsigned long long total_number_of_additions = (unsigned long long)number_of_rows * number_of_rows * (number_of_rows - 1);
+        unsigned long long total_number_of_floating_point_operations = total_number_of_multiplications + total_number_of_additions;
 
-        double total_number_of_floating_point_operations_per_second = total_number_of_floating_point_operations / run_duration_in_seconds;
+        double total_number_of_floating_point_operations_per_second = (double)total_number_of_floating_point_operations / run_duration_in_seconds;
         double total_number_of_billions_of_floating_point_operations_per_second = total_number_of_floating_point_operations_per_second / ONE_BILLION_FLOATING_POINT_OPERATIONS;
 
         fprintf(benchmarking_result_file, "%d,%d,%d,%.5f,%.5f\n", current_run_index + 1, number_of_rows, number_of_columns, run_duration_in_seconds, total_number_of_billions_of_floating_point_operations_per_second);

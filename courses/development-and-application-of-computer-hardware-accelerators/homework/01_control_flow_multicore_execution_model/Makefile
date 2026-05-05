@@ -16,3 +16,6 @@ matrix_multiplication_run_512_512: clean build
 
 matrix_multiplication_run_1024_1024: clean build
 	./$(EXECUTABLE) $(NUMBER_OF_RUNS) 1024 1024
+
+matrix_multiplication_run_2048_2048: clean build
+	./$(EXECUTABLE) $(NUMBER_OF_RUNS) 2048 2048
