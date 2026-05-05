@@ -1,13 +1,14 @@
 #define _POSIX_C_SOURCE 199309L
-#define NUMBER_OF_NANOSECONDS_IN_ONE_SECOND 1e9
-#define ONE_BILLION_FLOATING_POINT_OPERATIONS 1e9
-#define TOTAL_NUMBER_OF_PHYSICAL_PROCESSOR_CORES 4
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 #include <omp.h>
+
+#define NUMBER_OF_NANOSECONDS_IN_ONE_SECOND 1e9
+#define ONE_BILLION_FLOATING_POINT_OPERATIONS 1e9
+#define TOTAL_NUMBER_OF_PHYSICAL_PROCESSOR_CORES 4
 
 static double get_current_number_of_seconds() 
 {
