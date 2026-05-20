@@ -1,0 +1,130 @@
+/**
+ * MatMulKernel.maxj
+ *
+ * Computes C = A * B for two NxN matrices on a Maxeler DFE.
+ *
+ * Strategy:
+ *   - Matrix B is stored entirely in on-chip FMem (read-only table).
+ *   - Matrix A is streamed in element-by-element, row-major.
+ *   - For each element A[i][k], the kernel reads B[k][j] for j=0..N-1
+ *     from FMem using a computed address, multiplies, and accumulates.
+ *
+ * Data flow per output element C[i][j]:
+ *   - Inner counter k runs 0..N-1 (shared dimension)
+ *   - Outer counter j runs 0..N-1 (output column)
+ *   - For a fixed row i of A, we cycle through all j columns.
+ *
+ * Input stream "a":
+ *   float32, each A[i][k] repeated N times (once per output column j).
+ *   Total ticks = N * N * N.
+ *
+ * Output stream "c":
+ *   float32, emitted only when k == N-1 (full dot product done).
+ *   Total outputs = N * N elements, row-major.
+ *
+ * FMem "memB":
+ *   N*N floats preloaded by the Manager from CPU before execution.
+ *   Addressed as B[k * N + j].
+ */
+
+package matmul;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
+
+class MatMulKernel extends Kernel {
+
+    static final DFEType FLOAT_TYPE = dfeFloat(8, 24); // IEEE 754 single precision
+
+    MatMulKernel(KernelParameters parameters, int N) {
+        super(parameters);
+
+        // Number of bits needed to address N elements
+        int addrBits = MathUtils.bitsToAddress(N);
+
+        // -------------------------------------------------------------------
+        // Counter k: inner loop (0 to N-1), advances every tick.
+        // Iterates over the shared dimension of the multiplication.
+        // -------------------------------------------------------------------
+        Count.Params kParams = control.count.makeParams(addrBits)
+            .withMax(N);
+        Counter kCounter = control.count.makeCounter(kParams);
+        DFEVar k = kCounter.getCount(); // ranges 0 .. N-1
+
+        // -------------------------------------------------------------------
+        // Counter j: outer loop (0 to N-1), advances when k wraps.
+        // Selects which column of B (and C) we are computing.
+        // -------------------------------------------------------------------
+        Count.Params jParams = control.count.makeParams(addrBits)
+            .withMax(N)
+            .withEnable(k.eq(N - 1));
+        Counter jCounter = control.count.makeCounter(jParams);
+        DFEVar j = jCounter.getCount(); // ranges 0 .. N-1
+
+        // -------------------------------------------------------------------
+        // Input stream: elements of matrix A.
+        // The host repeats each A[i][k] exactly N times before advancing k.
+        // Total stream length = N * N * N ticks.
+        // -------------------------------------------------------------------
+        DFEVar aElem = io.input("a", FLOAT_TYPE);
+
+        // -------------------------------------------------------------------
+        // On-chip FMem: stores entire matrix B (N*N float32 values).
+        // Filled by the CPU via mapped memory before the kernel runs.
+        // Address = k * N + j  =>  selects B[k][j].
+        // -------------------------------------------------------------------
+        Memory<DFEVar> memB = mem.alloc(FLOAT_TYPE, N * N);
+        memB.mapToCPU("memB"); // expose so CPU host can write to it
+
+        int memAddrBits = MathUtils.bitsToAddress(N * N);
+        DFEVar kCast = k.cast(dfeUInt(memAddrBits));
+        DFEVar jCast = j.cast(dfeUInt(memAddrBits));
+        DFEVar bAddr = kCast * N + jCast;
+
+        DFEVar bElem = memB.read(bAddr);
+
+        // -------------------------------------------------------------------
+        // Multiply A[i][k] * B[k][j]
+        // -------------------------------------------------------------------
+        DFEVar product = aElem * bElem;
+
+        // -------------------------------------------------------------------
+        // Accumulate: C[i][j] = sum_k  A[i][k] * B[k][j]
+        //
+        // Self-referencing accumulator using stream.offset(acc, -1).
+        // MaxJ builds a dataflow graph so this cycle is resolved at
+        // compile time — it corresponds to a pipelined register feedback.
+        //
+        // When k == 0: reset accumulator (start of new dot product).
+        // When k  > 0: add product to the value carried from tick k-1.
+        // -------------------------------------------------------------------
+        DFEVar isFirstInDotProduct = k.eq(0);
+
+        // Forward-declare the result so we can feed it back via offset
+        DFEVar accFinal = optimization.pipeline(product); // pipeline hint
+
+        // Previous tick's accumulator value (feedback register)
+        DFEVar prevAcc = stream.offset(accFinal, -1);
+
+        // Select: reset to 0 at start of dot product, else carry forward
+        DFEVar carryIn = isFirstInDotProduct
+            ? constant.var(FLOAT_TYPE, 0)
+            : prevAcc;
+
+        // Final accumulated value for this tick
+        DFEVar result = product + carryIn;
+
+        // -------------------------------------------------------------------
+        // Controlled output: emit only when k == N-1 (dot product complete).
+        // The SLiC runtime collects these N*N output values into C row-major.
+        // -------------------------------------------------------------------
+        DFEVar outputEnable = k.eq(N - 1);
+        io.output("c", result, FLOAT_TYPE, outputEnable);
+    }
+}

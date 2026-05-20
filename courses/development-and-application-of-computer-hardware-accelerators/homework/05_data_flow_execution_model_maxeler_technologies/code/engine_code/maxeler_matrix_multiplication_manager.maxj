@@ -1,0 +1,65 @@
+/**
+ * MatMulManager.maxj
+ *
+ * Manager for the MatMul DFE design.
+ *
+ * Responsibilities:
+ *   1. Instantiates MatMulKernel.
+ *   2. Connects stream "a" (input) and "c" (output) to the CPU via PCIe.
+ *   3. Exposes FMem "memB" to the CPU so matrix B can be preloaded.
+ *   4. Auto-generates the SLiC interface:
+ *        MatMul(ticks, a_data, c_data)
+ *        MatMul_writeLMem_memB(engine, offset, size, data)
+ *   5. Builds the .max file for simulation or DFE deployment.
+ *
+ * Build modes (controlled by MaxIDE run rules):
+ *   Simulation: fast (~minutes), good for correctness checking.
+ *   DFE:        full FPGA synthesis (~30 minutes), for real hardware.
+ */
+
+package matmul;
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager.IOType;
+
+public class MatMulManager {
+
+    // Matrix dimension — must match MatMulCpuCode.c
+    public static final int N = 64;
+
+    public static void main(String[] args) {
+
+        // Parse arguments from MaxIDE (determines simulation vs DFE mode)
+        EngineParameters params = new EngineParameters(args);
+
+        // Standard Manager: handles CPU<->DFE communication over PCIe
+        Manager manager = new Manager(params);
+
+        // Instantiate the kernel with the chosen matrix dimension
+        Kernel kernel = new MatMulKernel(
+            manager.makeKernelParameters("MatMulKernel"), N);
+
+        // Register the kernel
+        manager.setKernel(kernel);
+
+        // Route all I/O between CPU and DFE over PCIe:
+        //   - Input  stream "a"  : CPU -> DFE
+        //   - Output stream "c"  : DFE -> CPU
+        //   - Mapped memory "memB": CPU writes before action starts
+        manager.setIO(IOType.ALL_CPU);
+
+        // Generate the SLiC C interface header automatically.
+        // Produces: MatMul.h with functions:
+        //   void MatMul(uint64_t ticks_MatMulKernel,
+        //               const void *instream_a,
+        //               void *outstream_c);
+        //   void MatMul_writeLMem_memB(max_engine_t *engine,
+        //               size_t offset, size_t size, const void *data);
+        manager.createSLiCinterface();
+
+        // Compile: produces the .max bitstream file (or simulation model)
+        manager.build();
+    }
+}
